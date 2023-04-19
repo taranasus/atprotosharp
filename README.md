@@ -1,2 +1,3 @@
-# atprotosharp
-3rd Party C# library for interacting with the social media at protocol developed by bluesky-social
+# aTproto#
+
+3rd Party C# library for interacting with the social media authenticated transfer protocol developed by https://github.com/bluesky-social/atproto
