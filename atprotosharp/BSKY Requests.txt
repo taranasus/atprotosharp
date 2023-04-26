@@ -1,0 +1,64 @@
+﻿-------------------------------
+GET SERVER DETAILS
+-------------------------------
+
+Request:
+GET - https://bsky.social/xrpc/com.atproto.server.describeServer
+
+Response:
+{
+  "availableUserDomains": [
+    ".bsky.social"
+  ],
+  "inviteCodeRequired": true,
+  "links": {
+    "privacyPolicy": "https://bsky.app/support/privacy",
+    "termsOfService": "https://bsky.app/support/tos"
+  }
+}
+
+------------------------------------
+AUTHENTIACATION REQUEST
+------------------------------------
+
+Request:
+POST - https://bsky.social/xrpc/com.atproto.server.createSession
+PAYLOAD: {"identifier":"taranode@outlook.com","password":"the password"}
+
+Response:
+{
+  "did": "did:plc:obfs",
+  "handle": "taranasus.xyz",
+  "email": "taranode@outlook.com",
+  "accessJwt": "accessJWTString",
+  "refreshJwt": "refreshJWTString"
+}
+
+-------------------------------------
+GET PROFILE REQUEST
+-------------------------------------
+
+Request:
+https://bsky.social/xrpc/app.bsky.actor.getProfile?actor=did%3Aplc%3Aobfs
+
+Query Parameters:
+actor = did value from authentication JWT.
+
+Response:
+
+{
+  "did": "did:plc:obfs",
+  "handle": "taranasus.xyz",
+  "displayName": "Taranasus",
+  "description": "Professional outrage generator.\n\nLanguages: English (poorly written); Romanian (poorly spoken); C# (poorly implemented); Azure Cloud (poorly planned)\n\nLiving in the UK. May contain traces of ADHD\n\nhttps://youtube.com/@Taranasus",
+  "avatar": "https://cdn.bsky.social/imgproxy/8GErsLdNUhT5on7mCiCJa1wKs60ghh4qTMAv2pkAIcM/rs:fill:1000:1000:1:0/plain/bafkreiardmvvelu2pdnxuh7n3i33bkiendnkof3vqg67wl6a6pstbaig5m@jpeg",
+  "banner": "https://cdn.bsky.social/imgproxy/GwmafWUEXGiLAz8ofuU8MmBkc_ecp6Eb6M6nsOyxAe4/rs:fill:3000:1000:1:0/plain/bafkreie3tljgyhf7m4bzsjn5w74dwn7ouyc3eii5s7k3ar26ztuq4lmtda@jpeg",
+  "followsCount": 87,
+  "followersCount": 192,
+  "postsCount": 521,
+  "indexedAt": "2023-04-22T05:09:15.031Z",
+  "viewer": {
+    "muted": false
+  },
+  "labels": []
+}
