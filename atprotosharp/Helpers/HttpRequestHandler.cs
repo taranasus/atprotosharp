@@ -9,11 +9,21 @@ public class HttpRequestHandler : IHttpRequestHandler
         _httpClient = new HttpClient();
     }
 
-    public async Task<string> HttpGetAsync(string url)
+    public async Task<string> HttpGetAsync(string url, Dictionary<string, string>? headers = null)
     {
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            if (headers != null)
+            {
+                foreach (var header in headers)
+                {
+                    request.Headers.Add(header.Key, header.Value);
+                }
+            }
+
+            var response = await _httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -29,6 +39,7 @@ public class HttpRequestHandler : IHttpRequestHandler
             throw new HttpRequestException("Error executing HttpGet request.", ex);
         }
     }
+
 
     public async Task<string> HttpPostAsync(string url, HttpContent content)
     {
