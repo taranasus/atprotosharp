@@ -9,6 +9,7 @@ public static class Constants
         public const string CreateSession = "/xrpc/com.atproto.server.createSession";
         public const string GetSession = "/xrpc/com.atproto.server.getSession";
         public const string GetProfile = "/xrpc/app.bsky.actor.getProfile";
+        public const string GetTimeline = "/xrpc/app.bsky.feed.getTimeline";
         public const string GetAccountInviteCodes = "/xrpc/com.atproto.server.getAccountInviteCodes";
     }
 }

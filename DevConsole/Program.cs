@@ -11,7 +11,22 @@ var options = new JsonSerializerOptions
 };
 
 // See https://aka.ms/new-console-template for more information
-Console.WriteLine("Welcome to Sky Terminal!");
+var header = $@"
+ ▄▄▄▄     ██████  ██ ▄█▀▓██   ██▓   ▄▄▄█████▓▓█████  ██▀███   ███▄ ▄███▓ ██▓ ███▄    █  ▄▄▄       ██▓    
+▓█████▄ ▒██    ▒  ██▄█▒  ▒██  ██▒   ▓  ██▒ ▓▒▓█   ▀ ▓██ ▒ ██▒▓██▒▀█▀ ██▒▓██▒ ██ ▀█   █ ▒████▄    ▓██▒    
+▒██▒ ▄██░ ▓██▄   ▓███▄░   ▒██ ██░   ▒ ▓██░ ▒░▒███   ▓██ ░▄█ ▒▓██    ▓██░▒██▒▓██  ▀█ ██▒▒██  ▀█▄  ▒██░    
+▒██░█▀    ▒   ██▒▓██ █▄   ░ ▐██▓░   ░ ▓██▓ ░ ▒▓█  ▄ ▒██▀▀█▄  ▒██    ▒██ ░██░▓██▒  ▐▌██▒░██▄▄▄▄██ ▒██░    
+░▓█  ▀█▓▒██████▒▒▒██▒ █▄  ░ ██▒▓░     ▒██▒ ░ ░▒████▒░██▓ ▒██▒▒██▒   ░██▒░██░▒██░   ▓██░ ▓█   ▓██▒░██████▒
+░▒▓███▀▒▒ ▒▓▒ ▒ ░▒ ▒▒ ▓▒   ██▒▒▒      ▒ ░░   ░░ ▒░ ░░ ▒▓ ░▒▓░░ ▒░   ░  ░░▓  ░ ▒░   ▒ ▒  ▒▒   ▓▒█░░ ▒░▓  ░
+▒░▒   ░ ░ ░▒  ░ ░░ ░▒ ▒░ ▓██ ░▒░        ░     ░ ░  ░  ░▒ ░ ▒░░  ░      ░ ▒ ░░ ░░   ░ ▒░  ▒   ▒▒ ░░ ░ ▒  ░
+ ░    ░ ░  ░  ░  ░ ░░ ░  ▒ ▒ ░░       ░         ░     ░░   ░ ░      ░    ▒ ░   ░   ░ ░   ░   ▒     ░ ░   
+ ░            ░  ░  ░    ░ ░                    ░  ░   ░            ░    ░           ░       ░  ░    ░  ░
+      ░                  ░ ░                                                                             
+";
+Console.ForegroundColor = ConsoleColor.White;
+Console.BackgroundColor = ConsoleColor.DarkBlue;
+Console.WriteLine(header);
+Console.ResetColor();
 
 var interpretor = new Interpretor();
 
@@ -28,9 +43,12 @@ while (true)
         returnedCommand = "";
 
     string command = returnedCommand + Console.ReadLine();
+    Console.ForegroundColor = ConsoleColor.Green;
     var commandResut = await interpretor.ProcessCommand(command);
     returnedCommand = commandResut.commandContinuation;
+    Console.WriteLine("");
     Console.WriteLine(commandResut.output);
+    Console.ResetColor();
 }
 
 
