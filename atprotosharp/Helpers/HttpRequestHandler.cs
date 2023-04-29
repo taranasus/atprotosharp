@@ -9,7 +9,7 @@ public class HttpRequestHandler : IHttpRequestHandler
         _httpClient = new HttpClient();
     }
 
-    public async Task<string> HttpGetAsync(string url, Dictionary<string, string>? headers = null)
+    public async Task<(bool isSuccess, string responseBody)> HttpGetAsync(string url, Dictionary<string, string>? headers = null)
     {
         try
         {
@@ -26,39 +26,31 @@ public class HttpRequestHandler : IHttpRequestHandler
             var response = await _httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStringAsync();
-            }
+                return (true, await response.Content.ReadAsStringAsync());
             else
-            {
-                throw new HttpRequestException($"HttpGet request failed with status code: {response.StatusCode}");
-            }
+                return (false, await response.Content.ReadAsStringAsync());
         }
         catch (Exception ex)
         {
-            throw new HttpRequestException("Error executing HttpGet request.", ex);
+            return (false, ex.Message);
         }
     }
 
 
-    public async Task<string> HttpPostAsync(string url, HttpContent content)
+    public async Task<(bool isSuccess, string responseBody)> HttpPostAsync(string url, HttpContent content)
     {
         try
         {
             var response = await _httpClient.PostAsync(url, content);
-
             if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStringAsync();
-            }
+                return (true, await response.Content.ReadAsStringAsync());
             else
-            {
-                throw new HttpRequestException($"HttpPost request failed with status code: {response.StatusCode}");
-            }
+                return (false, await response.Content.ReadAsStringAsync());
+
         }
         catch (Exception ex)
         {
-            throw new HttpRequestException("Error executing HttpPost request.", ex);
+            return (false, ex.Message);
         }
     }
 }

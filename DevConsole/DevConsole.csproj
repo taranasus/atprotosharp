@@ -10,4 +10,10 @@
   <ItemGroup>
     <ProjectReference Include="..\atprotosharp\atprotosharp.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="credentials\default.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="credentials\default.json" />
+  </ItemGroup>
 </Project>

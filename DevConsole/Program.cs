@@ -1,5 +1,9 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using atprotosharp;
+using DevConsole;
 
 var options = new JsonSerializerOptions
 {
@@ -7,41 +11,26 @@ var options = new JsonSerializerOptions
 };
 
 // See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+Console.WriteLine("Welcome to Sky Terminal!");
 
-var atApi = new API(new HttpRequestHandler());
+var interpretor = new Interpretor();
 
-Console.WriteLine("Get Server Details: ");
+string returnedCommand = null;
 
-Console.WriteLine(JsonSerializer.Serialize(await atApi.GetServerParameters(), options));
-Console.WriteLine("");
-Console.WriteLine("Get Authentication token");
-
-var userCredentials = ReadUserAndPasswordFromJsonFile("credentials/default.json");
-
-// Looks like different threads don't share the same global variables. Which means that each request has to be contained within itself.
-// This would probably be easier synchronously
-await atApi.Connect(userCredentials.user, userCredentials.password);
-
-Console.WriteLine("Finished connecting! Awaiting User input");
-//Console.ReadLine();
-
-var sessionRefereshResult = await atApi.GetSession();
-
-Console.WriteLine("SESSION REFERESH: " + JsonSerializer.Serialize(sessionRefereshResult, options));
-
-Console.ReadLine();
-
-static (string user, string password) ReadUserAndPasswordFromJsonFile(string filePath)
+while (true)
 {
-    using (var streamReader = new StreamReader(filePath))
-    {
-        var json = streamReader.ReadToEnd();
-        var jsonObject = JsonSerializer.Deserialize<JsonElement>(json);
+    if (string.IsNullOrWhiteSpace(returnedCommand))
+        Console.WriteLine("");
+    Console.Write(interpretor.GetUser() + "> ");
+    if (!string.IsNullOrWhiteSpace(returnedCommand))
+        Console.Write(returnedCommand);
+    else
+        returnedCommand = "";
 
-        var user = jsonObject.GetProperty("user").GetString();
-        var password = jsonObject.GetProperty("password").GetString();
-
-        return (user!, password!);
-    }
+    string command = returnedCommand + Console.ReadLine();
+    var commandResut = await interpretor.ProcessCommand(command);
+    returnedCommand = commandResut.commandContinuation;
+    Console.WriteLine(commandResut.output);
 }
+
+
