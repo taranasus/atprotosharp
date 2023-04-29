@@ -26,9 +26,11 @@ namespace DevConsole
             switch (commandWords[0].ToLower())
             {
                 case "login":
+                case "connect":
                     return await ConnectCommand(commandWords);
                     break;
                 case "logout":
+                case "disconnect":
                     await _atApi.LogOutAsync();
                     _userHandle = "";
                     return ("In a while aligator!", null);
@@ -77,21 +79,30 @@ namespace DevConsole
 @$"--------------------------------------------------------------------------
 This application allows you to interact with the atProto in terminal form.
 
-Most commands will guide you through how to use them after typing just the first word.
+Most commands will guide you through how to use them after typing just the
+first word.
 
 Following is a list of all implemented commands in alphabetical order
 --------------------------------------------------------------------------
 
-login      Establishes a connection with the bluesky server.
+connect    Establishes a connection with the bluesky server.
            Example: connect my@email.com myp4$$w0rd
            You can also just type ""connect"" and follow the prompts.
 
-           -f - Will use credeintials stored in credentials/default.json instead of having to type them in, which is really fat and conveninet
+           -f   Will use credeintials stored in credentials/default.json
+                instead of having to type them in, which is really fast
+                and conveninet
+disconnect Very complicated command. It logs you out of the current
+           session.
 
-help, ?    This command. Displays this page
+?          This command. Displays this page. Same as ""help""
 
-logout     Very complicated command. It logs you out of the current session.
-";
+help       This command. Displays this page. Same as ""?""
+
+login      same as ""connect""
+
+logout     same as ""disconnect""
+--------------------------------------------------------------------------";
             return (helpReturn, null);
         }
 
