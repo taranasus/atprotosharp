@@ -11,5 +11,7 @@ public static class Constants
         public const string GetProfile = "/xrpc/app.bsky.actor.getProfile";
         public const string GetTimeline = "/xrpc/app.bsky.feed.getTimeline";
         public const string GetAccountInviteCodes = "/xrpc/com.atproto.server.getAccountInviteCodes";
+        public const string UploadBlob = "/xrpc/com.atproto.repo.uploadBlob";
+        public const string CreateRecord = "/xrpc/com.atproto.repo.createRecord";
     }
 }

@@ -17,6 +17,10 @@
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="MimeTypes" Version="2.4.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>

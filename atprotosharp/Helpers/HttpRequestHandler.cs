@@ -37,16 +37,28 @@ public class HttpRequestHandler : IHttpRequestHandler
     }
 
 
-    public async Task<(bool isSuccess, string responseBody)> HttpPostAsync(string url, HttpContent content)
+    public async Task<(bool isSuccess, string responseBody)> HttpPostAsync(string url, HttpContent content, Dictionary<string, string>? headers = null)
     {
         try
         {
-            var response = await _httpClient.PostAsync(url, content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = content
+            };
+
+            if (headers != null)
+            {
+                foreach (var header in headers)
+                {
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+            }
+
+            var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
                 return (true, await response.Content.ReadAsStringAsync());
             else
                 return (false, await response.Content.ReadAsStringAsync());
-
         }
         catch (Exception ex)
         {

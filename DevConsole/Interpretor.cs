@@ -41,11 +41,74 @@ namespace DevConsole
                 case "help":
                 case "?":
                     return HelpCommand(commandWords);
+                case "upload":
+                    return await UploadFileCommand(commandWords);
+                case "post":
+                    return await PostCommand(commandWords, command);
                 default:
                     return (commandWords[0] + " not recognized as a command" + System.Environment.NewLine, null);
             }
 
             return ("Something went tits up!" + System.Environment.NewLine, null);
+        }
+        private async Task<(string output, string commandContinuation)> PostCommand(string[] commandWords, string fullCommand)
+        {
+            switch (commandWords.Length)
+            {
+                case 0:
+                    return ("How the fuck did this happen???", null);
+                case 1:
+                    return ("Type in the text of your post between |your post goes here| and then the full filepath to any files you wish to attach to the post separated by space ", commandWords[0] + " ");
+                default:
+                    var commandInfo = ParsePostCommandData(fullCommand);
+                    var result = await _atApi.CreatePost(commandInfo.Item1, commandInfo.Item2);
+                    if (!(bool)result.success)
+                        return (result.error, null);
+                    return ("Post Created! " + result.uri + System.Environment.NewLine + "Run a get timeline to see it!", null);
+            }
+        }
+
+        public static (string, string[]) ParsePostCommandData(string input)
+        {
+            // Find the start and end indices of the text between | |
+            int startIndex = input.IndexOf('|') + 1;
+            int endIndex = input.LastIndexOf('|');
+
+            // Extract the text between | |
+            string text = input.Substring(startIndex, endIndex - startIndex).Trim();
+
+            // Extract the remaining part of the input after the text
+            string remainingInput = input.Substring(endIndex + 1).Trim();
+
+            // Split the remaining input by spaces to get the file paths
+            string[] filePaths = remainingInput.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            // Return the extracted text and file paths as a tuple
+            return (text, filePaths);
+        }
+
+        private async Task<(string output, string commandContinuation)> UploadFileCommand(string[] commandWords)
+        {
+            switch (commandWords.Length)
+            {
+                case 0:
+                    return ("How the fuck did this happen???", null);
+                case 1:
+                    return ("Please type in the filepath to the file you wish to upload ", commandWords[0] + " ");
+                default:
+                    var result = await _atApi.UploadMedia(commandWords[1]);
+                    if (!(bool)result.success)
+                        return (result.error, null);
+                    string type = result.blob["$type"];
+                    string link = result.blob["ref"]["$link"];
+                    string mimeType = result.blob["mimeType"];
+                    int size = result.blob["size"];
+                    return (@$"File Uploaded Succesfully!
+Type: {type}
+Link: {link}
+MimeType: {mimeType}
+Size: {size.ToString()}", null);
+            }
         }
 
         private async Task<(string output, string commandContinuation)> ServerCommand(string[] commandWords)
@@ -211,6 +274,9 @@ logout     same as ""disconnect""
 server     Allows you to do various actions intended for the server.
            Type server and hit enter to get more information on available
            sub-commands.
+
+upload     Uploads a file to the server. Type upload and then the full 
+           filepath on your machine to the file you wish to upload.
 
 --------------------------------------------------------------------------";
             return (helpReturn, null);
