@@ -4,14 +4,14 @@ using atprotosharp;
 
 namespace DevConsole
 {
-    public class Interpretor
+    public partial class Interpretor
     {
-        API _atApi;
+        API _api;
         string _userHandle;
 
         public Interpretor()
         {
-            _atApi = new API();
+            _api = new API();
             _userHandle = "";
         }
 
@@ -20,224 +20,38 @@ namespace DevConsole
             return _userHandle;
         }
 
-        public async Task<(string output, string commandContinuation)> ProcessCommand(string command)
+        public async Task<(string? output, string? commandContinuation)> ProcessCommand(string command)
         {
             var commandWords = command.Split(' ');
             switch (commandWords[0].ToLower())
             {
                 case "get":
-                    return await GetCommand(commandWords);
+                    return await Get.Command(commandWords, _api);
                 case "connect":
-                    return await ConnectCommand(commandWords);
+                    return await Connect.Command(commandWords, _api);
                 case "server":
-                    return await ServerCommand(commandWords);
+                    return await Server.Command(commandWords, _api);
                 case "login":
-                    return await LoginCommand(commandWords);
+                    var loginResult = await Login.Command(commandWords, _api);
+                    _userHandle = loginResult.userHandle ?? "";
+                    return (loginResult.output, loginResult.commandContinuation);
                 case "logout":
                 case "disconnect":
-                    await _atApi.LogoutAsync();
+                    _api.Logout();
                     _userHandle = "";
                     return ("In a while aligator!", null);
                 case "help":
                 case "?":
                     return HelpCommand(commandWords);
                 case "upload":
-                    return await UploadFileCommand(commandWords);
+                    return await Upload.Command(commandWords, _api);
                 case "post":
-                    return await PostCommand(commandWords, command);
+                    return await Post.Command(commandWords, command, _api);
                 default:
                     return (commandWords[0] + " not recognized as a command" + System.Environment.NewLine, null);
             }
-
-            return ("Something went tits up!" + System.Environment.NewLine, null);
         }
-        private async Task<(string output, string commandContinuation)> PostCommand(string[] commandWords, string fullCommand)
-        {
-            switch (commandWords.Length)
-            {
-                case 0:
-                    return ("How the fuck did this happen???", null);
-                case 1:
-                    return ("Type in the text of your post between |your post goes here| and then the full filepath to any files you wish to attach to the post separated by space ", commandWords[0] + " ");
-                default:
-                    var commandInfo = ParsePostCommandData(fullCommand);
-                    var result = await _atApi.CreatePost(commandInfo.Item1, commandInfo.Item2);
-                    if (!(bool)result.success)
-                        return (result.error, null);
-                    return ("Post Created! " + result.uri + System.Environment.NewLine + "Run a get timeline to see it!", null);
-            }
-        }
-
-        public static (string, string[]) ParsePostCommandData(string input)
-        {
-            // Find the start and end indices of the text between | |
-            int startIndex = input.IndexOf('|') + 1;
-            int endIndex = input.LastIndexOf('|');
-
-            // Extract the text between | |
-            string text = input.Substring(startIndex, endIndex - startIndex).Trim();
-
-            // Extract the remaining part of the input after the text
-            string remainingInput = input.Substring(endIndex + 1).Trim();
-
-            // Split the remaining input by spaces to get the file paths
-            string[] filePaths = remainingInput.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-            // Return the extracted text and file paths as a tuple
-            return (text, filePaths);
-        }
-
-        private async Task<(string output, string commandContinuation)> UploadFileCommand(string[] commandWords)
-        {
-            switch (commandWords.Length)
-            {
-                case 0:
-                    return ("How the fuck did this happen???", null);
-                case 1:
-                    return ("Please type in the filepath to the file you wish to upload ", commandWords[0] + " ");
-                default:
-                    var result = await _atApi.UploadMedia(commandWords[1]);
-                    if (!(bool)result.success)
-                        return (result.error, null);
-                    string type = result.blob["$type"];
-                    string link = result.blob["ref"]["$link"];
-                    string mimeType = result.blob["mimeType"];
-                    int size = result.blob["size"];
-                    return (@$"File Uploaded Succesfully!
-Type: {type}
-Link: {link}
-MimeType: {mimeType}
-Size: {size.ToString()}", null);
-            }
-        }
-
-        private async Task<(string output, string commandContinuation)> ServerCommand(string[] commandWords)
-        {
-            switch (commandWords.Length)
-            {
-                case 0:
-                    return ("How the fuck did this happen???", null);
-                case 1:
-                    string commandOpstions =
-@"Here are your possible commands
-
-info - Gets available information from this server
-";
-                    return (commandOpstions, commandWords[0] + " ");
-                case 2:
-                    switch (commandWords[1])
-                    {
-                        case "info":
-                            var result = await _atApi.GetServerParameters();
-                            if (!(bool)result.success)
-                                return ($"Invalid Server, try again!", commandWords[0] + " ");
-                            var formattedResult =
-$@"Server URL: {result.serverUrl}
-Available User Domains: {string.Join(" | ", result.availableUserDomains)}
-Invitation code Required: {result.inviteCodeRequired}
-Privacy Policy: {result.links.privacyPolicy}
-Terms of Service: {result.links.termsOfService}";
-                            return (formattedResult, null);
-                        default:
-                            return ("Invalid command", null);
-
-                    }
-                default:
-                    return ("Invalid command", null);
-            }
-        }
-
-        private async Task<(string output, string commandContinuation)> GetCommand(string[] commandWords)
-        {
-            switch (commandWords.Length)
-            {
-                case 0:
-                    return ("How the fuck did this happen???", null);
-                case 1:
-                    string commandOpstions =
-@"Here are your possible commands
-
-timeline - Gets your timeline of posts and displays it
-";
-                    return (commandOpstions, commandWords[0] + " ");
-                case 2:
-                    switch (commandWords[1])
-                    {
-                        case "timeline":
-                            var result = await _atApi.GetTimeline("reverse-chronological");
-                            if (!(bool)result.success)
-                                return (result.error, null);
-
-                            string posts = "";
-                            foreach (var item in result.feed)
-                            {
-                                posts += $"--- [{item.post.indexedAt}][{item.post.author.displayName}][{item.post.author.handle}]" + ((bool)item.post.author.viewer.muted ? "[MUTED]" : "") + ((bool)item.post.author.viewer.blockedBy ? "[BLOCKED]" : "") + System.Environment.NewLine +
-                                    (item.post.author.labels.Count > 0 ? ("[LABELS: " + string.Join(" | " + item.post.author.labels) + System.Environment.NewLine) : "") +
-                                    item.post.record.text + System.Environment.NewLine + System.Environment.NewLine;
-                            }
-
-                            return (posts, null);
-                        default:
-                            return ("Invalid command", null);
-
-                    }
-                default:
-                    return ("Invalid command", null);
-            }
-        }
-
-        private async Task<(string output, string commandContinuation)> ConnectCommand(string[] commandWords)
-        {
-            switch (commandWords.Length)
-            {
-                case 0:
-                    return ("How the fuck did this happen???", null);
-                case 1:
-                    return ("Please type in the server URL you wish to use: ", commandWords[0] + " ");
-                default:
-                    var switchResult = await _atApi.SwitchServer(commandWords[1]);
-                    if (!switchResult.success)
-                        return (switchResult.error + " Try agin!", commandWords[0] + " ");
-                    var result = await _atApi.GetServerParameters();
-                    if (!(bool)result.success)
-                        return ($"Invalid Server, try again!", commandWords[0] + " ");
-                    return ($"Disconnected from previous server. Now connected to: {string.Join(" ", result.availableUserDomains)}", null);
-            }
-        }
-
-        private async Task<(string output, string commandContinuation)> LoginCommand(string[] commandWords)
-        {
-            switch (commandWords.Length)
-            {
-                case 0:
-                    return ("How the fuck did this happen???", null);
-                case 1:
-                    return ("Please type in your username: ", commandWords[0] + " ");
-                case 2:
-                    if (commandWords[1].ToLower() == "-f")
-                    {
-                        var credentials = ReadUserAndPasswordFromJsonFile("credentials/default.json");
-                        return await LoginCommand(new List<string>() { "connect", credentials.user, credentials.password }.ToArray());
-                    }
-                    return ("Please type in your password: ", commandWords[0] + " " + commandWords[1] + " ");
-                default:
-                    if (commandWords[1].ToLower() == "-f")
-                    {
-                        var credentials = ReadUserAndPasswordFromJsonFile($"credentials/{commandWords[2]}.json");
-                        return await LoginCommand(new List<string>() { "connect", credentials.user, credentials.password }.ToArray());
-                    }
-                    var response = await _atApi.LoginAsync(commandWords[1], commandWords[2]);
-                    if (string.IsNullOrWhiteSpace(response))
-                    {
-                        _userHandle = _atApi.GetMyHandle();
-                        return ("Connection Succesful! Welcome: " + _atApi.GetMyHandle(), null);
-                    }
-                    else
-                        return (response, null);
-            }
-        }
-
-        private (string output, string commandContinuation) HelpCommand(string[] commandWords)
+        private (string? output, string? commandContinuation) HelpCommand(string[] commandWords)
         {
             string helpReturn =
 @$"--------------------------------------------------------------------------
@@ -282,19 +96,7 @@ upload     Uploads a file to the server. Type upload and then the full
             return (helpReturn, null);
         }
 
-        static (string user, string password) ReadUserAndPasswordFromJsonFile(string filePath)
-        {
-            using (var streamReader = new StreamReader(filePath))
-            {
-                var json = streamReader.ReadToEnd();
-                var jsonObject = JsonSerializer.Deserialize<JsonElement>(json);
 
-                var user = jsonObject.GetProperty("user").GetString();
-                var password = jsonObject.GetProperty("password").GetString();
-
-                return (user!, password!);
-            }
-        }
     }
 }
 

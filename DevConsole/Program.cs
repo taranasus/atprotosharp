@@ -30,7 +30,7 @@ Console.ResetColor();
 
 var interpretor = new Interpretor();
 
-string returnedCommand = null;
+string? returnedCommand = null;
 
 while (true)
 {

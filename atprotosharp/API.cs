@@ -10,8 +10,8 @@ public class API
 {
     private string _serverUrl;
     private readonly IHttpRequestHandler _httpClient;
-    private dynamic _session;
-    private Dictionary<string, string> _authorizationHeader;
+    private dynamic? _session;
+    private Dictionary<string, string>? _authorizationHeader;
 
     #region Constructor
 
@@ -40,27 +40,16 @@ public class API
     /// <returns>ServerConfig object with the information for that server.</returns>
     public async Task<dynamic> GetServerParameters()
     {
-        var response = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.DescribeServer, _authorizationHeader);
-
-        dynamic result = new ExpandoObject();
-        if (!response.isSuccess)
-        {
-            result.success = false;
-            result.error = response.responseBody;
-            return result;
-        }
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.DescribeServer, _authorizationHeader);
 
         try
         {
-            result = JObject.Parse(response.responseBody);
+            result = JObject.Parse(result.responseBody);
             result.serverUrl = _serverUrl;
             result.success = true;
         }
         catch
         {
-            result.success = false;
-            result.error = "Invalid Server";
-            return result;
         }
         return result;
     }
@@ -70,7 +59,7 @@ public class API
     /// </summary>
     /// <param name="username">your username</param>
     /// <param name="password">your password</param>
-    public async Task<string> LoginAsync(string username, string password)
+    public async Task<string?> LoginAsync(string username, string password)
     {
         if (_session == null)
         {
@@ -93,21 +82,23 @@ public class API
     /// Disconnect from the current session
     /// </summary>
     /// <returns>Null if success. Errors if errors</returns>
-    public async Task LogoutAsync()
+    public void Logout()
     {
         _session = null;
     }
-
-
 
     /// <summary>
     /// Returns the session object for your provided account after authentication. If no authentication this should throw an error
     /// </summary>
     /// <returns>AuthenticationResponse object with the information for your particular session</returns>
-    public async Task<AuthenticationResponse?> GetSession()
+    public async Task<dynamic?> GetSession()
     {
-        var response = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetSession, _authorizationHeader);
-        var result = JsonConvert.DeserializeObject<AuthenticationResponse>(response.responseBody);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetSession, _authorizationHeader);
+        if (result.success)
+        {
+            result = JObject.Parse(result.responseBody);
+            result.success = true;
+        }
         return result;
     }
 
@@ -116,10 +107,14 @@ public class API
     /// </summary>
     /// <param name="did">the did for the profile you want to get. ex did:pfc:whatever43</param>
     /// <returns>UserProfile model containt the detials for that user</returns>
-    public async Task<UserProfile> GetProfileByDid(string did)
+    public async Task<dynamic> GetProfileByDid(string did)
     {
-        var response = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetProfile + "?actor=" + did, _authorizationHeader);
-        var result = JsonConvert.DeserializeObject<UserProfile>(response.responseBody);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetProfile + "?actor=" + did, _authorizationHeader);
+        if (result.success)
+        {
+            result = JObject.Parse(result.responseBody);
+            result.success = true;
+        }
         return result;
     }
 
@@ -131,37 +126,29 @@ public class API
     /// <returns>A dynamic ExpandoObject with whatever the server gives us.</returns>
     public async Task<dynamic> GetTimeline(string algorithm, int limit = 30)
     {
-        dynamic result = new ExpandoObject();
-        result.success = false;
+        dynamic result = GenerateResult(false, "You need to be logged in in order to conduct this operation. Type \"login\" in the terminal");
 
         if (_authorizationHeader == null)
-        {
-            result.error = "You need to be logged in in order to conduct this operation. Type \"login\" in the terminal";
             return result;
-        }
 
         var requestUrl = _serverUrl + Constants.Endpoints.GetTimeline + "?";
         if (!string.IsNullOrWhiteSpace(algorithm))
             requestUrl += "algorithm=" + algorithm + "&";
         requestUrl += "limit=" + limit.ToString();
 
-        var response = await _httpClient.HttpGetAsync(requestUrl, _authorizationHeader);
+        result = await _httpClient.HttpGetAsync(requestUrl, _authorizationHeader);
 
-
-        if (!response.isSuccess)
-        {
-            result.error = response.responseBody;
+        if (!result.success)
             return result;
-        }
-        result = JObject.Parse(response.responseBody);
+
+        result = JObject.Parse(result.responseBody);
         result.success = true;
         return result;
     }
 
     public async Task<dynamic> CreatePost(string postText, params string[] filePaths)
     {
-        dynamic result = new ExpandoObject();
-        result.success = false;
+        dynamic result = GenerateResult(false);
 
         List<dynamic> uploadedFiles = new List<dynamic>();
         if (filePaths.Length > 0)
@@ -175,6 +162,7 @@ public class API
                 }
                 else
                 {
+                    result.success = uploadMediaResult.success;
                     result.error = $"Could not upload file: {filePath} ERROR: " + uploadMediaResult.error;
                     return result;
                 }
@@ -183,7 +171,7 @@ public class API
 
         dynamic payload = new JObject(
             new JProperty("collection", "app.bsky.feed.post"),
-            new JProperty("repo", _session.did),
+            new JProperty("repo", _session?.did),
             new JProperty("record", new JObject(
                 new JProperty("text", postText),
                 new JProperty("createdAt", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")),
@@ -220,18 +208,15 @@ public class API
             payload.record["embed"] = embed;
         }
 
-        var response = await _httpClient.HttpPostAsync(
+        result = await _httpClient.HttpPostAsync(
             _serverUrl + Constants.Endpoints.CreateRecord,
             new StringContent(payload.ToString(), Encoding.UTF8, "application/json"),
             _authorizationHeader
             );
 
-        if (!response.isSuccess)
-        {
-            result.error = response.responseBody;
+        if (!result.success)
             return result;
-        }
-        result = JObject.Parse(response.responseBody);
+        result = JObject.Parse(result.responseBody);
         result.success = true;
         return result;
 
@@ -293,8 +278,7 @@ public class API
     /// <returns>A body with the ID / path of the file in the storage cont</returns>
     public async Task<dynamic> UploadMedia(string filePath)
     {
-        dynamic result = new ExpandoObject();
-        result.success = false;
+        var result = GenerateResult(false);
 
         if (!System.IO.File.Exists(filePath))
         {
@@ -305,14 +289,13 @@ public class API
         var file = System.IO.File.OpenRead(filePath);
         var content = new StreamContent(file);
         content.Headers.ContentType = new MediaTypeHeaderValue(MimeTypes.GetMimeType(filePath));
-        var response = await _httpClient.HttpPostAsync(_serverUrl + Constants.Endpoints.UploadBlob, content, _authorizationHeader);
+        result = await _httpClient.HttpPostAsync(_serverUrl + Constants.Endpoints.UploadBlob, content, _authorizationHeader);
 
-        if (!response.isSuccess)
+        if (!result.success)
         {
-            result.error = response.responseBody;
             return result;
         }
-        result = JObject.Parse(response.responseBody);
+        result = JObject.Parse(result.responseBody);
         result.success = true;
         return result;
     }
@@ -321,21 +304,24 @@ public class API
     /// Gets all the invite codes availabile to the signed-in account
     /// </summary>
     /// <returns>AccountInviteCodesResult mode containing all the invite codes (used, unused, and if used by which did)</returns>
-    public async Task<AccountInviteCodesResult> GetAccountInviteCodes()
+    public async Task<dynamic> GetAccountInviteCodes()
     {
-        var response = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetAccountInviteCodes, _authorizationHeader);
-        var result = JsonConvert.DeserializeObject<AccountInviteCodesResult>(response.responseBody);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetAccountInviteCodes, _authorizationHeader);
+        if (!result.success)
+            return result;
+        result = JObject.Parse(result.responseBody);
+        result.success = true;
         return result;
     }
 
-    public string GetMyHandle()
+    public string? GetMyHandle()
     {
-        return _session.handle;
+        return _session?.handle;
     }
 
-    public async Task<(bool success, string error)> SwitchServer(string url)
+    public (bool success, string? error) SwitchServer(string url)
     {
-        await LogoutAsync();
+        Logout();
         if (url.StartsWith("http://"))
             return (false, "Only https:// is allowed. http:// not permitted");
         _serverUrl = url;
@@ -357,19 +343,29 @@ public class API
             password = password
         };
 
-        dynamic result = new ExpandoObject();
-        result.success = false;
+        dynamic result = GenerateResult(false);
         var response = await _httpClient.HttpPostAsync(
             _serverUrl + Constants.Endpoints.CreateSession,
             new StringContent(JsonConvert.SerializeObject(requestPayload), Encoding.UTF8, "application/json")
             );
-        if (!response.isSuccess)
+        if (!response.success)
         {
-            result.error = response.responseBody;
-            return result;
+            return response;
         }
         result = JObject.Parse(response.responseBody);
         result.success = true;
+        return result;
+    }
+
+    /// <summary>
+    /// Create a dynamic result object to provide cleaner code in the methods
+    /// </summary>
+    private dynamic GenerateResult(bool success, string? error = null)
+    {
+        dynamic result = new ExpandoObject();
+        result.success = success;
+        if (error != null)
+            result.error = error;
         return result;
     }
     #endregion

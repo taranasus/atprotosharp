@@ -1,4 +1,6 @@
-﻿namespace atprotosharp;
+﻿using System.Dynamic;
+
+namespace atprotosharp;
 
 public class HttpRequestHandler : IHttpRequestHandler
 {
@@ -9,8 +11,14 @@ public class HttpRequestHandler : IHttpRequestHandler
         _httpClient = new HttpClient();
     }
 
-    public async Task<(bool isSuccess, string responseBody)> HttpGetAsync(string url, Dictionary<string, string>? headers = null)
+    public async Task<HttpResponseMessage> GetAsync(string url)
     {
+        return await _httpClient.GetAsync(url);
+    }
+
+    public async Task<dynamic> HttpGetAsync(string url, Dictionary<string, string>? headers = null)
+    {
+        dynamic result = GenerateResult(false);
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -26,19 +34,26 @@ public class HttpRequestHandler : IHttpRequestHandler
             var response = await _httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
-                return (true, await response.Content.ReadAsStringAsync());
+            {
+                result.success = true;
+                result.responseBody = await response.Content.ReadAsStringAsync();
+            }
             else
-                return (false, await response.Content.ReadAsStringAsync());
+            {
+                result.error = await response.Content.ReadAsStringAsync();
+            }
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            result.error = ex.Message;
         }
+        return result;
     }
 
 
-    public async Task<(bool isSuccess, string responseBody)> HttpPostAsync(string url, HttpContent content, Dictionary<string, string>? headers = null)
+    public async Task<dynamic> HttpPostAsync(string url, HttpContent content, Dictionary<string, string>? headers = null)
     {
+        dynamic result = GenerateResult(false);
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, url)
@@ -56,13 +71,31 @@ public class HttpRequestHandler : IHttpRequestHandler
 
             var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
-                return (true, await response.Content.ReadAsStringAsync());
+            {
+                result.success = true;
+                result.responseBody = await response.Content.ReadAsStringAsync();
+            }
             else
-                return (false, await response.Content.ReadAsStringAsync());
+            {
+                result.error = await response.Content.ReadAsStringAsync();
+            }
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            result.error = ex.Message;
         }
+        return result;
+    }
+
+    /// <summary>
+    /// Create a dynamic result object to provide cleaner code in the methods
+    /// </summary>
+    private dynamic GenerateResult(bool success, string? error = null)
+    {
+        dynamic result = new ExpandoObject();
+        result.success = success;
+        if (error != null)
+            result.error = error;
+        return result;
     }
 }
