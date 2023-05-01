@@ -23,8 +23,7 @@ var header = $@"
  ░            ░  ░  ░    ░ ░                    ░  ░   ░            ░    ░           ░       ░  ░    ░  ░
       ░                  ░ ░                                                                             
 ";
-Console.ForegroundColor = ConsoleColor.White;
-Console.BackgroundColor = ConsoleColor.DarkBlue;
+Console.ForegroundColor = ConsoleColor.DarkBlue;
 Console.WriteLine(header);
 Console.ResetColor();
 

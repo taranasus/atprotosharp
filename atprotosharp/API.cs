@@ -11,7 +11,6 @@ public class API
     private string _serverUrl;
     private readonly IHttpRequestHandler _httpClient;
     private dynamic? _session;
-    private Dictionary<string, string>? _authorizationHeader;
 
     #region Constructor
 
@@ -40,7 +39,7 @@ public class API
     /// <returns>ServerConfig object with the information for that server.</returns>
     public async Task<dynamic> GetServerParameters()
     {
-        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.DescribeServer, _authorizationHeader);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.DescribeServer);
 
         try
         {
@@ -63,6 +62,7 @@ public class API
     {
         if (_session == null)
         {
+            // Storing the ssesion we've made when connecting to the server, so that we can make subsequent requests
             _session = await CreateSession(username, password);
             if (!(bool)_session.success)
             {
@@ -70,10 +70,6 @@ public class API
                 _session = null;
                 return message;
             }
-            _authorizationHeader = new Dictionary<string, string>()
-            {
-                {"Authorization", "Bearer "+_session.accessJwt}
-            };
         }
         return null;
     }
@@ -93,7 +89,7 @@ public class API
     /// <returns>AuthenticationResponse object with the information for your particular session</returns>
     public async Task<dynamic?> GetSession()
     {
-        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetSession, _authorizationHeader);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetSession, AutorizationHeader());
         if (result.success)
         {
             result = JObject.Parse(result.responseBody);
@@ -109,7 +105,7 @@ public class API
     /// <returns>UserProfile model containt the detials for that user</returns>
     public async Task<dynamic> GetProfileByDid(string did)
     {
-        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetProfile + "?actor=" + did, _authorizationHeader);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetProfile + "?actor=" + did, AutorizationHeader());
         if (result.success)
         {
             result = JObject.Parse(result.responseBody);
@@ -126,9 +122,9 @@ public class API
     /// <returns>A dynamic ExpandoObject with whatever the server gives us.</returns>
     public async Task<dynamic> GetTimeline(string algorithm, int limit = 30)
     {
-        dynamic result = GenerateResult(false, "You need to be logged in in order to conduct this operation. Type \"login\" in the terminal");
+        var result = GenerateResult(false, "You need to be logged in in order to conduct this operation. Type \"login\" in the terminal");
 
-        if (_authorizationHeader == null)
+        if (AutorizationHeader() == null)
             return result;
 
         var requestUrl = _serverUrl + Constants.Endpoints.GetTimeline + "?";
@@ -136,7 +132,7 @@ public class API
             requestUrl += "algorithm=" + algorithm + "&";
         requestUrl += "limit=" + limit.ToString();
 
-        result = await _httpClient.HttpGetAsync(requestUrl, _authorizationHeader);
+        result = await _httpClient.HttpGetAsync(requestUrl, AutorizationHeader());
 
         if (!result.success)
             return result;
@@ -146,9 +142,18 @@ public class API
         return result;
     }
 
+    /// <summary>
+    /// Creates a new post to be inserted into the user's timeline
+    /// </summary>
+    /// <param name="postText">The text of the post</param>
+    /// <param name="filePaths">The paths of the files you want to upload on your filesystem</param>
+    /// <returns>A dynamic ExpandoObject with whatever the server gives us.</returns>    
     public async Task<dynamic> CreatePost(string postText, params string[] filePaths)
     {
-        dynamic result = GenerateResult(false);
+        var result = GenerateResult(false, "You need to be logged in in order to conduct this operation. Type \"login\" in the terminal");
+
+        if (AutorizationHeader() == null)
+            return result;
 
         List<dynamic> uploadedFiles = new List<dynamic>();
         if (filePaths.Length > 0)
@@ -211,7 +216,7 @@ public class API
         result = await _httpClient.HttpPostAsync(
             _serverUrl + Constants.Endpoints.CreateRecord,
             new StringContent(payload.ToString(), Encoding.UTF8, "application/json"),
-            _authorizationHeader
+            AutorizationHeader()
             );
 
         if (!result.success)
@@ -278,7 +283,10 @@ public class API
     /// <returns>A body with the ID / path of the file in the storage cont</returns>
     public async Task<dynamic> UploadMedia(string filePath)
     {
-        var result = GenerateResult(false);
+        var result = GenerateResult(false, "You need to be logged in in order to conduct this operation. Type \"login\" in the terminal");
+
+        if (AutorizationHeader() == null)
+            return result;
 
         if (!System.IO.File.Exists(filePath))
         {
@@ -289,7 +297,7 @@ public class API
         var file = System.IO.File.OpenRead(filePath);
         var content = new StreamContent(file);
         content.Headers.ContentType = new MediaTypeHeaderValue(MimeTypes.GetMimeType(filePath));
-        result = await _httpClient.HttpPostAsync(_serverUrl + Constants.Endpoints.UploadBlob, content, _authorizationHeader);
+        result = await _httpClient.HttpPostAsync(_serverUrl + Constants.Endpoints.UploadBlob, content, AutorizationHeader());
 
         if (!result.success)
         {
@@ -306,7 +314,7 @@ public class API
     /// <returns>AccountInviteCodesResult mode containing all the invite codes (used, unused, and if used by which did)</returns>
     public async Task<dynamic> GetAccountInviteCodes()
     {
-        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetAccountInviteCodes, _authorizationHeader);
+        var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetAccountInviteCodes, AutorizationHeader());
         if (!result.success)
             return result;
         result = JObject.Parse(result.responseBody);
@@ -314,11 +322,19 @@ public class API
         return result;
     }
 
+    /// <summary>
+    /// Gets the handle of the account you're signed in as.
+    /// </summary>
+    /// <returns>The handle of the account you're signed in as. Returns null if not signed in.</returns>
     public string? GetMyHandle()
     {
         return _session?.handle;
     }
 
+    /// <summary>
+    /// Points the API at a different server. This will log you out.
+    /// </summary>
+    /// <param name="url">The URL of the server to point to. Does not allow http. Https only!</param>
     public (bool success, string? error) SwitchServer(string url)
     {
         Logout();
@@ -343,7 +359,7 @@ public class API
             password = password
         };
 
-        dynamic result = GenerateResult(false);
+        var result = GenerateResult(false);
         var response = await _httpClient.HttpPostAsync(
             _serverUrl + Constants.Endpoints.CreateSession,
             new StringContent(JsonConvert.SerializeObject(requestPayload), Encoding.UTF8, "application/json")
@@ -368,6 +384,22 @@ public class API
             result.error = error;
         return result;
     }
+
+    /// <summary>
+    /// Creates the authorization header for the HTTP client
+    /// </summary>
+    /// <returns>A dictionary containing the authorization header</returns>
+    private Dictionary<string, string>? AutorizationHeader()
+    {
+        if (string.IsNullOrWhiteSpace(_session?.accessJwt?.ToString()))
+            return null;
+        return new Dictionary<string, string>()
+            {
+                {"Authorization", "Bearer "+_session.accessJwt}
+            };
+
+    }
+
     #endregion
 }
 
