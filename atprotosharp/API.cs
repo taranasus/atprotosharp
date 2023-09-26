@@ -1,6 +1,8 @@
 ﻿using System.Dynamic;
 using System.Net.Http.Headers;
 using System.Text;
+using atprotosharp.Exceptions;
+using atprotosharp.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using static System.Net.WebRequestMethods;
@@ -37,20 +39,25 @@ public class API
     /// (Unauthenticated) Get the configuration of the server you're connecting with
     /// </summary>
     /// <returns>ServerConfig object with the information for that server.</returns>
-    public async Task<dynamic> GetServerParameters()
+    public async Task<ServerDescription?> GetServerParameters()
     {
         var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.DescribeServer);
+        if (result.success) 
+        {
+            try
+            {
+                result = JObject.Parse(result.responseBody);
+                result.serverUrl = _serverUrl;
+                result.success = true;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ATProtocolException("Unable to parse DescribeServer response", ex);
+            }
+        }
 
-        try
-        {
-            result = JObject.Parse(result.responseBody);
-            result.serverUrl = _serverUrl;
-            result.success = true;
-        }
-        catch
-        {
-        }
-        return result;
+        return null;
     }
 
     /// <summary>
@@ -60,6 +67,7 @@ public class API
     /// <param name="password">your password</param>
     public async Task<string?> LoginAsync(string username, string password)
     {
+        //TODO Plain text seems like a bad idea
         if (_session == null)
         {
             // Storing the ssesion we've made when connecting to the server, so that we can make subsequent requests
@@ -87,15 +95,24 @@ public class API
     /// Returns the session object for your provided account after authentication. If no authentication this should throw an error
     /// </summary>
     /// <returns>AuthenticationResponse object with the information for your particular session</returns>
-    public async Task<dynamic?> GetSession()
+    public async Task<Session?> GetSession()
     {
         var result = await _httpClient.HttpGetAsync(_serverUrl + Constants.Endpoints.GetSession, AutorizationHeader());
         if (result.success)
         {
-            result = JObject.Parse(result.responseBody);
-            result.success = true;
+            try
+            {
+                result = JObject.Parse(result.responseBody);
+                result.success = true;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new ATProtocolException("Unale to parse GetSession response", ex);
+            }
         }
-        return result;
+        
+        return null;
     }
 
     /// <summary>
