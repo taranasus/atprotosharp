@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "atprotosharp", "atprotoshar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevConsole", "DevConsole\DevConsole.csproj", "{F1FA139B-C1DB-44F2-A607-5ECE685A113E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "atprotosharp.tests", "atprotosharp.tests\atprotosharp.tests.csproj", "{6CCB1409-E061-4588-8059-86B071F7441E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{F1FA139B-C1DB-44F2-A607-5ECE685A113E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1FA139B-C1DB-44F2-A607-5ECE685A113E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1FA139B-C1DB-44F2-A607-5ECE685A113E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6CCB1409-E061-4588-8059-86B071F7441E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6CCB1409-E061-4588-8059-86B071F7441E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6CCB1409-E061-4588-8059-86B071F7441E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6CCB1409-E061-4588-8059-86B071F7441E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
